@@ -1,0 +1,443 @@
+{% extends "base.html" %}
+
+{% block title %}Property Intelligence Dashboard — {{ prop.property_id }} — PROPAGENT ZERO{% endblock %}
+
+{% block content %}
+<!-- Leaflet Map Assets -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<div class="page-header" style="margin-bottom: 20px;">
+  <div class="page-title">
+    <h2><span>🧠</span> Real-Estate Property Intelligence Dashboard</h2>
+    <p>Comprehensive geospatial, cadastral, cryptographic, and algorithmic diligence profile.</p>
+  </div>
+
+  <!-- Property Switcher Dropdown -->
+  <div style="display: flex; gap: 10px; align-items: center;">
+    <form method="GET" action="{{ url_for('property_intelligence') }}" style="display: flex; gap: 8px; margin: 0;">
+      <select name="property_id" class="form-control" onchange="this.form.submit()" style="min-width: 260px; font-weight: 600;">
+        {% for p in all_props %}
+          <option value="{{ p.property_id }}" {% if p.property_id == prop.property_id %}selected{% endif %}>
+            {{ p.property_id }} — {{ p.owner_name }} ({{ p.village }})
+          </option>
+        {% endfor %}
+      </select>
+      <noscript><button type="submit" class="btn btn-secondary btn-sm">Inspect</button></noscript>
+    </form>
+
+    <a href="{{ url_for('property_passport', property_id=prop.property_id) }}" class="btn btn-primary">
+      <span>🛡️</span> Digital Passport &rarr;
+    </a>
+  </div>
+</div>
+
+<!-- Critical Warning Banners if Mismatches Exist -->
+{% if prop.purpose_status == 'Land-Purpose Mismatch' or indicators.land_purpose_mismatch %}
+<div class="alert alert-warning" style="margin-bottom: 16px; border-left: 4px solid #f59e0b; background: rgba(245, 158, 11, 0.12); padding: 12px 18px; border-radius: 6px; display: flex; align-items: center; gap: 12px;">
+  <span style="font-size: 20px;">⚠️</span>
+  <div>
+    <strong style="color: #fbbf24;">LAND-PURPOSE MISMATCH DETECTED:</strong>
+    <span style="color: #e2e8f0; font-size: 13.5px; margin-left: 6px;">
+      Declared purpose differs from recorded/verified category. Further verification is recommended.
+    </span>
+    <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+      Seller Declared: <strong style="color: #fff;">{{ prop.declared_purpose or 'Commercial' }}</strong> &bull;
+      Official Registry Category: <strong style="color: #f87171;">{{ prop.land_purpose or 'Agriculture' }}</strong>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if prop.location_status == 'Location Mismatch Detected' or indicators.location_mismatch %}
+<div class="alert alert-danger" style="margin-bottom: 16px; border-left: 4px solid #ef4444; background: rgba(239, 68, 68, 0.12); padding: 12px 18px; border-radius: 6px; display: flex; align-items: center; gap: 12px;">
+  <span style="font-size: 20px;">⚠️</span>
+  <div>
+    <strong style="color: #f87171;">LOCATION MISMATCH DETECTED:</strong>
+    <span style="color: #e2e8f0; font-size: 13.5px; margin-left: 6px;">
+      Document-stated location or physical revenue division differs from the recorded cadastral registry location.
+    </span>
+  </div>
+</div>
+{% endif %}
+
+<!-- Key Intelligence Indicators Ribbon -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px;">
+  <!-- Risk Score Card -->
+  <div class="card" style="margin: 0; padding: 14px 18px; border-top: 3px solid {% if prop.risk_score >= 80 %}#ef4444{% elif prop.risk_score >= 60 %}#f97316{% elif prop.risk_score >= 30 %}#eab308{% else %}#10b981{% endif %};">
+    <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Fraud Risk Score</div>
+    <div style="display: flex; align-items: baseline; gap: 6px; margin-top: 4px;">
+      <span style="font-size: 26px; font-weight: 800; font-family: var(--font-mono); color: {% if prop.risk_score >= 80 %}#ef4444{% elif prop.risk_score >= 60 %}#f97316{% elif prop.risk_score >= 30 %}#fbbf24{% else %}#34d399{% endif %};">{{ prop.risk_score }}</span>
+      <span style="font-size: 12px; color: var(--text-muted);">/ 100</span>
+    </div>
+    <div style="font-size: 11.5px; font-weight: 600; color: #fff; margin-top: 2px;">{{ prop.risk_level }}</div>
+  </div>
+
+  <!-- Land Purpose Card -->
+  <div class="card" style="margin: 0; padding: 14px 18px; border-top: 3px solid {% if prop.purpose_status == 'Consistent' %}#10b981{% else %}#eab308{% endif %};">
+    <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Land Purpose</div>
+    <div style="font-size: 16px; font-weight: 700; color: #fff; margin-top: 4px;">{{ prop.land_purpose or 'Residential' }}</div>
+    <div style="font-size: 11.5px; margin-top: 4px;">
+      {% if prop.purpose_status == 'Consistent' %}
+        <span class="badge badge-verified" style="font-size: 10.5px;">✓ Purpose Consistent</span>
+      {% else %}
+        <span class="badge badge-review-required" style="font-size: 10.5px;">⚠ Purpose Mismatch</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Location Consistency Card -->
+  <div class="card" style="margin: 0; padding: 14px 18px; border-top: 3px solid {% if prop.location_status == 'Consistent' %}#10b981{% else %}#ef4444{% endif %};">
+    <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Location Status</div>
+    <div style="font-size: 15px; font-weight: 700; color: #fff; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ prop.village }}, {{ prop.district }}</div>
+    <div style="font-size: 11.5px; margin-top: 4px;">
+      {% if prop.location_status == 'Consistent' %}
+        <span class="badge badge-verified" style="font-size: 10.5px;">✓ Location Verified</span>
+      {% else %}
+        <span class="badge badge-high-risk" style="font-size: 10.5px;">⚠ Location Mismatch</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Document Integrity Card -->
+  <div class="card" style="margin: 0; padding: 14px 18px; border-top: 3px solid {% if indicators.hash_mismatch %}#ef4444{% else %}#10b981{% endif %};">
+    <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Document Integrity</div>
+    <div style="font-size: 16px; font-weight: 700; color: #fff; margin-top: 4px;">SHA-256 Ledger</div>
+    <div style="font-size: 11.5px; margin-top: 4px;">
+      {% if indicators.hash_mismatch %}
+        <span class="badge badge-high-risk" style="font-size: 10.5px;">⚠ Checksum Altered</span>
+      {% else %}
+        <span class="badge badge-verified" style="font-size: 10.5px;">✓ Hashes Intact ({{ documents|length }})</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Duplicate Status Card -->
+  <div class="card" style="margin: 0; padding: 14px 18px; border-top: 3px solid {% if indicators.duplicate_property %}#a855f7{% else %}#10b981{% endif %};">
+    <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Spatial Duplicate</div>
+    <div style="font-size: 16px; font-weight: 700; color: #fff; margin-top: 4px;">Cadastral Cluster</div>
+    <div style="font-size: 11.5px; margin-top: 4px;">
+      {% if indicators.duplicate_property %}
+        <span class="badge badge-high-risk" style="font-size: 10.5px; background: rgba(168, 85, 247, 0.2); color: #c084fc; border-color: #a855f7;">🟣 Duplicate Overlap</span>
+      {% else %}
+        <span class="badge badge-verified" style="font-size: 10.5px;">✓ No Overlaps</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Main 2-Column Intelligence Layout -->
+<div style="display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 20px;">
+  
+  <!-- LEFT COLUMN: Geo Map + Polygon, Cadastral Factual Data, Document Status -->
+  <div>
+    
+    <!-- Geospatial Map Container -->
+    <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 20px;">
+      <div class="card-header" style="padding: 16px 20px; margin: 0; display: flex; justify-content: space-between; align-items: center;">
+        <h3><span>🗺️</span> Geospatial Property Map & Boundary Visualization</h3>
+        <span class="badge badge-neutral" style="font-family: var(--font-mono); font-size: 11px;">
+          Lat: {{ prop.latitude|round(4) }}, Lon: {{ prop.longitude|round(4) }}
+        </span>
+      </div>
+
+      <!-- Leaflet Map Div -->
+      <div id="property-map" style="width: 100%; height: 360px; background: #0b1322;"></div>
+
+      <div style="padding: 12px 18px; background: #080f1d; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: var(--text-muted);">
+        <span>
+          <strong>Cadastral Coordinates:</strong> {{ prop.address or prop.location }}
+        </span>
+        <span style="font-style: italic; color: #94a3b8;">
+          ⚠️ Notice: Map visualization is indicative only and does not constitute legal boundary certification.
+        </span>
+      </div>
+    </div>
+
+    <!-- Factual Property Specifications Table -->
+    <div class="card" style="margin-bottom: 20px;">
+      <div class="card-header">
+        <h3><span>📐</span> Factual Registry & Cadastral Records</h3>
+        <span class="mono-id">{{ prop.property_id }}</span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table">
+          <tbody>
+            <tr>
+              <th style="width: 25%;">Registered Owner</th>
+              <td><strong>{{ prop.owner_name }}</strong> (User ID: <span class="mono-id">{{ prop.owner_id }}</span>)</td>
+              <th style="width: 25%;">Survey Number</th>
+              <td class="mono-id">{{ prop.survey_number }}</td>
+            </tr>
+            <tr>
+              <th>Plot Land Area</th>
+              <td>{{ prop.land_area }} sq.ft ({{ prop.area_unit }})</td>
+              <th>Property Type</th>
+              <td>{{ prop.property_type }}</td>
+            </tr>
+            <tr>
+              <th>Recorded Purpose</th>
+              <td>
+                <span class="badge badge-neutral" style="font-weight: 600; color: #fff;">{{ prop.land_purpose or 'Residential' }}</span>
+              </td>
+              <th>Declared Purpose</th>
+              <td>
+                <span class="badge {% if prop.purpose_status == 'Consistent' %}badge-verified{% else %}badge-review-required{% endif %}">
+                  {{ prop.declared_purpose or 'Residential' }}
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <th>Revenue Jurisdiction</th>
+              <td>{{ prop.taluk }}, {{ prop.district }}</td>
+              <th>Registration Date</th>
+              <td>{{ prop.registration_date }}</td>
+            </tr>
+            <tr>
+              <th>Location Status</th>
+              <td>
+                <span class="badge {% if prop.location_status == 'Consistent' %}badge-verified{% else %}badge-high-risk{% endif %}">
+                  {{ prop.location_status or 'Consistent' }}
+                </span>
+              </td>
+              <th>Purpose Status</th>
+              <td>
+                <span class="badge {% if prop.purpose_status == 'Consistent' %}badge-verified{% else %}badge-review-required{% endif %}">
+                  {{ prop.purpose_status or 'Consistent' }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Document Status & Cryptographic Hashes -->
+    <div class="card" style="margin-bottom: 20px;">
+      <div class="card-header">
+        <h3><span>📁</span> Verified Documents & Hash Ledger</h3>
+        <span class="badge badge-neutral">{{ documents|length }} Files</span>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Document Type</th>
+              <th>Filename</th>
+              <th>SHA-256 Hash</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for doc in documents %}
+              <tr>
+                <td><strong>{{ doc.document_type }}</strong></td>
+                <td style="font-size: 11.5px; color: var(--text-secondary);">{{ doc.filename }}</td>
+                <td><span class="mono-hash">{{ doc.sha256_hash }}</span></td>
+                <td>
+                  {% if doc.verification_status == 'Verified' %}
+                    <span class="badge badge-verified">✓ Intact</span>
+                  {% elif doc.verification_status == 'Hash Mismatch' %}
+                    <span class="badge badge-high-risk">⚠ Tampered</span>
+                  {% else %}
+                    <span class="badge badge-review-required">Pending</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% else %}
+              <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 16px;">No documents attached.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT COLUMN: Verification Alerts, SHAP Explainability, QR Code, History -->
+  <div>
+    
+    <!-- Active Verification Alerts Card -->
+    <div class="card" style="margin-bottom: 20px;">
+      <div class="card-header">
+        <h3><span>⚠️</span> Comprehensive Verification Signals</h3>
+        <span class="badge badge-neutral">{{ alerts|length }} Active</span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <!-- Signal 1: Owner Mismatch -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #080f1d; border-radius: 4px; font-size: 12.5px;">
+          <span>Owner Verification</span>
+          {% if indicators.owner_mismatch %}
+            <span class="badge badge-high-risk">🔴 Owner Mismatch</span>
+          {% else %}
+            <span class="badge badge-verified">✓ Verified</span>
+          {% endif %}
+        </div>
+
+        <!-- Signal 2: Duplicate Property -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #080f1d; border-radius: 4px; font-size: 12.5px;">
+          <span>Duplicate Property Check</span>
+          {% if indicators.duplicate_property %}
+            <span class="badge badge-high-risk">🔴 Duplicate Overlap</span>
+          {% else %}
+            <span class="badge badge-verified">✓ Unique Parcel</span>
+          {% endif %}
+        </div>
+
+        <!-- Signal 3: Document Integrity -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #080f1d; border-radius: 4px; font-size: 12.5px;">
+          <span>Document Integrity (SHA-256)</span>
+          {% if indicators.hash_mismatch %}
+            <span class="badge badge-high-risk">🔴 Hash Tampering</span>
+          {% else %}
+            <span class="badge badge-verified">✓ Cryptographically Valid</span>
+          {% endif %}
+        </div>
+
+        <!-- Signal 4: Location Consistency -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #080f1d; border-radius: 4px; font-size: 12.5px;">
+          <span>Location Consistency</span>
+          {% if indicators.location_mismatch or prop.location_status == 'Location Mismatch Detected' %}
+            <span class="badge badge-high-risk">🔴 Location Mismatch</span>
+          {% else %}
+            <span class="badge badge-verified">✓ Geocoded Match</span>
+          {% endif %}
+        </div>
+
+        <!-- Signal 5: Land Purpose Consistency -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #080f1d; border-radius: 4px; font-size: 12.5px;">
+          <span>Land-Purpose Consistency</span>
+          {% if indicators.land_purpose_mismatch or prop.purpose_status == 'Land-Purpose Mismatch' %}
+            <span class="badge badge-review-required">🟡 Purpose Mismatch</span>
+          {% else %}
+            <span class="badge badge-verified">✓ Purpose Consistent</span>
+          {% endif %}
+        </div>
+
+        <!-- Signal 6: Suspicious History -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #080f1d; border-radius: 4px; font-size: 12.5px;">
+          <span>Ownership History Continuity</span>
+          {% if indicators.ownership_conflict or indicators.suspicious_transfer %}
+            <span class="badge badge-review-required">🟡 Rapid / Broken Title</span>
+          {% else %}
+            <span class="badge badge-verified">✓ Clear Chain of Title</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- SHAP Explainable AI Card -->
+    <div class="card" style="margin-bottom: 20px;">
+      <div class="card-header">
+        <h3><span>🤖</span> Fraud-Risk ML & SHAP Explainability</h3>
+        <span class="badge badge-neutral">{{ xai.ml_prediction }} ({{ xai.suspicious_probability }}%)</span>
+      </div>
+
+      <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 10px;">
+        TOP RISK CONTRIBUTORS (SHAP ATTRIBUTION):
+      </div>
+
+      {% if xai.top_risk_drivers %}
+        <div class="shap-bar-container">
+          {% for driver in xai.top_risk_drivers %}
+            <div class="shap-bar-row">
+              <div class="shap-bar-label">{{ driver.label }}</div>
+              <div class="shap-bar-track">
+                <div class="shap-bar-fill" style="width: {{ (driver.impact * 150)|round(0) if driver.impact > 0 else 20 }}%;"></div>
+              </div>
+              <div style="font-family: var(--font-mono); font-size: 11px; color: #f87171; width: 45px; text-align: right;">
+                +{{ (driver.impact * 100)|round(1) }}%
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+          Zero adverse risk drivers pushing towards fraudulent classification.
+        </div>
+      {% endif %}
+
+      <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin: 14px 0 6px;">
+        PLAIN LANGUAGE INTELLIGENCE SUMMARY:
+      </div>
+      <ul style="font-size: 12px; color: var(--text-secondary); padding-left: 18px; line-height: 1.5;">
+        {% for exp in xai.plain_explanation %}
+          <li>{{ exp }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <!-- QR Property Passport Card -->
+    <div class="card" style="margin-bottom: 20px; text-align: center;">
+      <div class="card-header" style="justify-content: center;">
+        <h3><span>📱</span> QR Property Digital Passport</h3>
+      </div>
+      
+      <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">
+        Scan with mobile device to open this property's cryptographic Digital Passport directly.
+      </p>
+
+      <div style="background: #fff; padding: 12px; border-radius: 8px; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
+        <img src="{{ qr_code_data_uri }}" alt="Property QR Passport" style="width: 140px; height: 140px; display: block;">
+      </div>
+
+      <div style="margin-top: 12px;">
+        <span class="mono-id" style="font-size: 12px;">{{ prop.property_id }}</span>
+      </div>
+
+      <div style="margin-top: 10px;">
+        <a href="{{ url_for('property_passport', property_id=prop.property_id) }}" class="btn btn-secondary btn-sm">
+          Open Digital Passport ↗
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Leaflet Map Initialization Script -->
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    var lat = {{ prop.latitude or 13.0827 }};
+    var lon = {{ prop.longitude or 80.2707 }};
+    var propId = "{{ prop.property_id }}";
+    var propOwner = "{{ prop.owner_name }}";
+    var propArea = "{{ prop.land_area }} sq.ft";
+    var propSurvey = "{{ prop.survey_number }}";
+
+    var map = L.map('property-map').setView([lat, lon], 16);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Marker
+    var marker = L.marker([lat, lon]).addTo(map);
+    marker.bindPopup("<b>" + propId + "</b><br>Owner: " + propOwner + "<br>Survey: " + propSurvey + "<br>Area: " + propArea).openPopup();
+
+    // Boundary Polygon if available
+    var boundaryJson = '{{ prop.boundary_coordinates | safe }}';
+    if (boundaryJson && boundaryJson.trim().length > 5) {
+      try {
+        var coords = JSON.parse(boundaryJson);
+        if (Array.isArray(coords) && coords.length >= 3) {
+          var polygon = L.polygon(coords, {
+            color: '#38bdf8',
+            fillColor: '#0284c7',
+            fillOpacity: 0.35,
+            weight: 2
+          }).addTo(map);
+          polygon.bindTooltip("Cadastral Parcel: " + propSurvey, { permanent: false });
+          map.fitBounds(polygon.getBounds());
+        }
+      } catch (e) {
+        console.warn("Could not parse boundary coordinates:", e);
+      }
+    }
+  });
+</script>
+{% endblock %}

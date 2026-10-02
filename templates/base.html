@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}PROPAGENT ZERO — AI-Powered Property Verification & Fraud Detection{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <!-- Top Prototype Disclaimer Banner -->
+  <div class="disclaimer-banner">
+    <span>🛡️</span>
+    <span>
+      <strong>PROTOTYPE NOTICE:</strong> PROPAGENT ZERO is a scam-prevention prototype. Verification results are indicators only and do not constitute legal proof of ownership or government certification. Synthetic demo data only.
+    </span>
+  </div>
+
+  <!-- Main Navigation Header -->
+  <header class="app-header">
+    <div class="nav-container">
+      <a href="{{ url_for('dashboard') }}" class="brand-group">
+        <div class="brand-icon">🛡️</div>
+        <div class="brand-text">
+          <h1>PROPAGENT <span>ZERO</span></h1>
+          <div class="brand-tagline">Verify. Detect. Protect.</div>
+        </div>
+      </a>
+
+      <nav class="main-nav">
+        <a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}active{% endif %}">
+          <span>📊</span> Dashboard
+        </a>
+        <a href="{{ url_for('properties') }}" class="{% if request.endpoint in ['properties', 'property_passport', 'new_property'] %}active{% endif %}">
+          <span>🏢</span> Properties
+        </a>
+        <a href="{{ url_for('property_intelligence') }}" class="{% if request.endpoint == 'property_intelligence' %}active{% endif %}">
+          <span>🧠</span> Intelligence
+        </a>
+        <a href="{{ url_for('property_compare') }}" class="{% if request.endpoint == 'property_compare' %}active{% endif %}">
+          <span>⚖️</span> Compare
+        </a>
+        <a href="{{ url_for('documents') }}" class="{% if request.endpoint == 'documents' %}active{% endif %}">
+          <span>📁</span> Documents
+        </a>
+        <a href="{{ url_for('transfers') }}" class="{% if request.endpoint == 'transfers' %}active{% endif %}">
+          <span>🤝</span> Transfers
+        </a>
+        <a href="{{ url_for('alerts') }}" class="{% if request.endpoint == 'alerts' %}active{% endif %}">
+          <span>⚠️</span> Alerts
+        </a>
+        <a href="{{ url_for('verification_center') }}" class="{% if request.endpoint == 'verification_center' %}active{% endif %}">
+          <span>🔬</span> Verification
+        </a>
+        <a href="{{ url_for('audit') }}" class="{% if request.endpoint == 'audit' %}active{% endif %}">
+          <span>📜</span> Audit Trail
+        </a>
+      </nav>
+
+      <!-- Active Persona & Quick Role Switcher -->
+      <div class="user-persona-group">
+        {% if session.get('user_id') %}
+        <div class="persona-badge">
+          <span class="persona-dot {{ session.get('user_role', 'admin') }}"></span>
+          <span><strong>{{ session.get('user_name', 'Demo User') }}</strong> ({{ session.get('user_role', 'user')|capitalize }})</span>
+          <a href="{{ url_for('logout') }}" style="margin-left: 8px; color: var(--text-muted); font-size: 11.5px; text-decoration: none;" title="Sign Out">Sign Out ⎋</a>
+        </div>
+        
+        {% if demo_mode %}
+        <div class="role-switcher-dropdown">
+          <form action="{{ url_for('switch_role', role='seller') }}" method="POST" style="display:inline; margin:0;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="{% if session.get('user_role') == 'seller' %}active{% endif %}" style="background:none; border:none; color:inherit; font:inherit; cursor:pointer; padding:3px 8px; border-radius:4px;" title="Switch to Demo Seller">Seller</button>
+          </form>
+          <form action="{{ url_for('switch_role', role='buyer') }}" method="POST" style="display:inline; margin:0;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="{% if session.get('user_role') == 'buyer' %}active{% endif %}" style="background:none; border:none; color:inherit; font:inherit; cursor:pointer; padding:3px 8px; border-radius:4px;" title="Switch to Demo Buyer">Buyer</button>
+          </form>
+          <form action="{{ url_for('switch_role', role='admin') }}" method="POST" style="display:inline; margin:0;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="{% if session.get('user_role') == 'admin' %}active{% endif %}" style="background:none; border:none; color:inherit; font:inherit; cursor:pointer; padding:3px 8px; border-radius:4px;" title="Switch to Demo Admin">Admin</button>
+          </form>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="persona-badge">
+          <a href="{{ url_for('login') }}" class="btn btn-primary btn-sm" style="text-decoration:none; padding:4px 10px;">Sign In 🔑</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+
+  <!-- Flash Messaging -->
+  <main class="app-main">
+    <div class="flash-container">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category if category != 'error' else 'danger' }}">
+              <span>{{ message }}</span>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+    </div>
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Platform Footer -->
+  <footer class="app-footer">
+    <div class="footer-links">
+      <a href="{{ url_for('dashboard') }}">Dashboard</a> &bull;
+      <a href="{{ url_for('properties') }}">Property Directory</a> &bull;
+      <a href="{{ url_for('property_intelligence') }}">Intelligence</a> &bull;
+      <a href="{{ url_for('property_compare') }}">Comparison</a> &bull;
+      <a href="{{ url_for('alerts') }}">Active Alerts</a> &bull;
+      <a href="{{ url_for('transfers') }}">Safe Transfers</a> &bull;
+      <a href="{{ url_for('audit') }}">Audit Ledger</a>
+    </div>
+    <p>
+      &copy; 2026 PROPAGENT ZERO — AI-Powered Property Verification & Fraud Detection.
+    </p>
+    <p style="margin-top: 4px; font-size: 11.5px; color: #475569;">
+      Open Government Reference Architecture: data.gov.in & Tamil Nadu GIS Administrative Reference Model. Fictional anonymized records only.
+    </p>
+  </footer>
+
+</body>
+</html>

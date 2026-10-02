@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}Property Diligence Comparison — PROPAGENT ZERO{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 24px;">
+  <div class="page-title">
+    <h2><span>⚖️</span> Factual Property Due Diligence Comparison</h2>
+    <p>Side-by-side cadastral, purpose, document integrity, and risk comparison. Objective factual data without endorsement.</p>
+  </div>
+</div>
+
+<!-- Comparison Property Selector -->
+<div class="card" style="padding: 18px 24px; margin-bottom: 24px; background: #0c1626;">
+  <form method="GET" action="{{ url_for('property_compare') }}" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 16px; align-items: flex-end; margin: 0;">
+    <div>
+      <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 6px; font-weight: 600;">
+        Primary Property (Property 1)
+      </label>
+      <select name="p1" class="form-control" style="font-weight: 600;">
+        {% for p in all_props %}
+          <option value="{{ p.property_id }}" {% if p.property_id == p1_id %}selected{% endif %}>
+            {{ p.property_id }} — {{ p.owner_name }} ({{ p.village }}, {{ p.district }})
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 6px; font-weight: 600;">
+        Comparison Property (Property 2)
+      </label>
+      <select name="p2" class="form-control" style="font-weight: 600;">
+        {% for p in all_props %}
+          <option value="{{ p.property_id }}" {% if p.property_id == p2_id %}selected{% endif %}>
+            {{ p.property_id }} — {{ p.owner_name }} ({{ p.village }}, {{ p.district }})
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="height: 38px; padding: 0 20px;">
+      <span>⚖️</span> Compare Properties
+    </button>
+  </form>
+</div>
+
+<!-- Comparison Table Matrix -->
+{% if prop1 and prop2 %}
+<div class="card" style="padding: 0; overflow: hidden; margin-bottom: 30px;">
+  <div class="card-header" style="padding: 16px 20px; margin: 0; background: #0b1322;">
+    <h3><span>📋</span> Comparative Attributes Matrix</h3>
+    <span class="badge badge-neutral">Objective Data Only</span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="data-table" style="width: 100%;">
+      <thead>
+        <tr>
+          <th style="width: 24%; font-size: 13px;">Diligence Attribute</th>
+          <th style="width: 38%; font-size: 14px; background: rgba(56, 189, 248, 0.05); color: #38bdf8;">
+            <div class="mono-id">{{ prop1.property_id }}</div>
+            <div style="font-size: 14px; font-weight: 700; color: #fff; margin-top: 2px;">{{ prop1.owner_name }}</div>
+          </th>
+          <th style="width: 38%; font-size: 14px; background: rgba(168, 85, 247, 0.05); color: #c084fc;">
+            <div class="mono-id">{{ prop2.property_id }}</div>
+            <div style="font-size: 14px; font-weight: 700; color: #fff; margin-top: 2px;">{{ prop2.owner_name }}</div>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Row 1: Location & Coordinates -->
+        <tr>
+          <td><strong>Location & Coordinates</strong></td>
+          <td>
+            <strong>{{ prop1.village }}, {{ prop1.taluk }}</strong><br>
+            <span style="font-size: 12px; color: var(--text-muted);">{{ prop1.district }}, Tamil Nadu</span><br>
+            <span style="font-family: var(--font-mono); font-size: 11px; color: var(--accent-cyan);">Lat: {{ prop1.latitude|round(4) }}, Lon: {{ prop1.longitude|round(4) }}</span>
+          </td>
+          <td>
+            <strong>{{ prop2.village }}, {{ prop2.taluk }}</strong><br>
+            <span style="font-size: 12px; color: var(--text-muted);">{{ prop2.district }}, Tamil Nadu</span><br>
+            <span style="font-family: var(--font-mono); font-size: 11px; color: var(--accent-cyan);">Lat: {{ prop2.latitude|round(4) }}, Lon: {{ prop2.longitude|round(4) }}</span>
+          </td>
+        </tr>
+
+        <!-- Row 2: Land Area & Survey No -->
+        <tr>
+          <td><strong>Area & Cadastral Survey</strong></td>
+          <td>
+            <strong style="font-size: 14px; color: #fff;">{{ prop1.land_area }} sq.ft</strong><br>
+            <span class="mono-id" style="font-size: 12px;">Survey: {{ prop1.survey_number }}</span>
+          </td>
+          <td>
+            <strong style="font-size: 14px; color: #fff;">{{ prop2.land_area }} sq.ft</strong><br>
+            <span class="mono-id" style="font-size: 12px;">Survey: {{ prop2.survey_number }}</span>
+          </td>
+        </tr>
+
+        <!-- Row 3: Land Purpose -->
+        <tr>
+          <td><strong>Land Purpose Category</strong></td>
+          <td>
+            <div>Recorded: <strong style="color: #fff;">{{ prop1.land_purpose or 'Residential' }}</strong></div>
+            <div style="font-size: 12px; color: var(--text-muted);">Declared: {{ prop1.declared_purpose or 'Residential' }}</div>
+            <div style="margin-top: 4px;">
+              {% if prop1.purpose_status == 'Consistent' %}
+                <span class="badge badge-verified">✓ Purpose Consistent</span>
+              {% else %}
+                <span class="badge badge-review-required">⚠ Purpose Mismatch</span>
+              {% endif %}
+            </div>
+          </td>
+          <td>
+            <div>Recorded: <strong style="color: #fff;">{{ prop2.land_purpose or 'Residential' }}</strong></div>
+            <div style="font-size: 12px; color: var(--text-muted);">Declared: {{ prop2.declared_purpose or 'Residential' }}</div>
+            <div style="margin-top: 4px;">
+              {% if prop2.purpose_status == 'Consistent' %}
+                <span class="badge badge-verified">✓ Purpose Consistent</span>
+              {% else %}
+                <span class="badge badge-review-required">⚠ Purpose Mismatch</span>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+
+        <!-- Row 4: Owner Identity Verification -->
+        <tr>
+          <td><strong>Owner Verification</strong></td>
+          <td>
+            <span class="badge badge-verified">✓ Identity Linked</span><br>
+            <span style="font-size: 11.5px; color: var(--text-muted);">User ID: {{ prop1.owner_id }}</span>
+          </td>
+          <td>
+            <span class="badge badge-verified">✓ Identity Linked</span><br>
+            <span style="font-size: 11.5px; color: var(--text-muted);">User ID: {{ prop2.owner_id }}</span>
+          </td>
+        </tr>
+
+        <!-- Row 5: Document Status & Integrity -->
+        <tr>
+          <td><strong>Document Status & Integrity</strong></td>
+          <td>
+            <div><strong>{{ prop1.documents|length }} Documents Registered</strong></div>
+            <div style="margin-top: 4px;">
+              {% if prop1.documents|selectattr('verification_status', 'equalto', 'Hash Mismatch')|list|length > 0 %}
+                <span class="badge badge-high-risk">⚠ Tampered File Detected</span>
+              {% else %}
+                <span class="badge badge-verified">✓ SHA-256 Hashes Verified</span>
+              {% endif %}
+            </div>
+          </td>
+          <td>
+            <div><strong>{{ prop2.documents|length }} Documents Registered</strong></div>
+            <div style="margin-top: 4px;">
+              {% if prop2.documents|selectattr('verification_status', 'equalto', 'Hash Mismatch')|list|length > 0 %}
+                <span class="badge badge-high-risk">⚠ Tampered File Detected</span>
+              {% else %}
+                <span class="badge badge-verified">✓ SHA-256 Hashes Verified</span>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+
+        <!-- Row 6: Ownership History -->
+        <tr>
+          <td><strong>Chain of Title History</strong></td>
+          <td>
+            <strong>{{ prop1.history|length }} Historical Entries</strong><br>
+            <span style="font-size: 12px; color: var(--text-muted);">Registered: {{ prop1.registration_date }}</span>
+          </td>
+          <td>
+            <strong>{{ prop2.history|length }} Historical Entries</strong><br>
+            <span style="font-size: 12px; color: var(--text-muted);">Registered: {{ prop2.registration_date }}</span>
+          </td>
+        </tr>
+
+        <!-- Row 7: Mismatch Alerts -->
+        <tr>
+          <td><strong>Active Verification Alerts</strong></td>
+          <td>
+            {% if prop1.alerts %}
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                {% for a in prop1.alerts %}
+                  <div>
+                    <span class="badge {% if a.severity == 'High' %}badge-high-risk{% else %}badge-review-required{% endif %}" style="font-size: 11px;">
+                      {{ a.alert_type }}
+                    </span>
+                    <span style="font-size: 11.5px; color: #cbd5e1; margin-left: 4px;">{{ a.description[:60] }}...</span>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <span class="badge badge-verified">✓ Zero Active Alerts</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if prop2.alerts %}
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                {% for a in prop2.alerts %}
+                  <div>
+                    <span class="badge {% if a.severity == 'High' %}badge-high-risk{% else %}badge-review-required{% endif %}" style="font-size: 11px;">
+                      {{ a.alert_type }}
+                    </span>
+                    <span style="font-size: 11.5px; color: #cbd5e1; margin-left: 4px;">{{ a.description[:60] }}...</span>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <span class="badge badge-verified">✓ Zero Active Alerts</span>
+            {% endif %}
+          </td>
+        </tr>
+
+        <!-- Row 8: Risk Indicator -->
+        <tr style="background: #060d19;">
+          <td><strong>Risk Score & Indicator</strong></td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 24px; font-weight: 800; font-family: var(--font-mono); color: {% if prop1.risk_score >= 80 %}#ef4444{% elif prop1.risk_score >= 60 %}#f97316{% elif prop1.risk_score >= 30 %}#fbbf24{% else %}#34d399{% endif %};">{{ prop1.risk_score }}</span>
+              <span style="font-size: 12px; color: var(--text-muted);">/ 100</span>
+              <span class="badge {% if prop1.risk_score >= 80 %}badge-critical-risk{% elif prop1.risk_score >= 60 %}badge-high-risk{% elif prop1.risk_score >= 30 %}badge-review-required{% else %}badge-low-risk{% endif %}">
+                {{ prop1.risk_level }}
+              </span>
+            </div>
+            <div style="margin-top: 8px;">
+              <a href="{{ url_for('property_passport', property_id=prop1.property_id) }}" class="btn btn-secondary btn-sm">View Passport ↗</a>
+              <a href="{{ url_for('property_intelligence', property_id=prop1.property_id) }}" class="btn btn-secondary btn-sm">Intelligence ↗</a>
+            </div>
+          </td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 24px; font-weight: 800; font-family: var(--font-mono); color: {% if prop2.risk_score >= 80 %}#ef4444{% elif prop2.risk_score >= 60 %}#f97316{% elif prop2.risk_score >= 30 %}#fbbf24{% else %}#34d399{% endif %};">{{ prop2.risk_score }}</span>
+              <span style="font-size: 12px; color: var(--text-muted);">/ 100</span>
+              <span class="badge {% if prop2.risk_score >= 80 %}badge-critical-risk{% elif prop2.risk_score >= 60 %}badge-high-risk{% elif prop2.risk_score >= 30 %}badge-review-required{% else %}badge-low-risk{% endif %}">
+                {{ prop2.risk_level }}
+              </span>
+            </div>
+            <div style="margin-top: 8px;">
+              <a href="{{ url_for('property_passport', property_id=prop2.property_id) }}" class="btn btn-secondary btn-sm">View Passport ↗</a>
+              <a href="{{ url_for('property_intelligence', property_id=prop2.property_id) }}" class="btn btn-secondary btn-sm">Intelligence ↗</a>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card" style="text-align: center; padding: 40px;">
+  <p style="color: var(--text-muted);">Please select two valid properties to compare.</p>
+</div>
+{% endif %}
+
+{% endblock %}

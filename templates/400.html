@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}400 Bad Request — PROPAGENT ZERO{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 60px auto; text-align: center;">
+  <div class="card" style="padding: 40px 24px;">
+    <div style="font-size: 48px; margin-bottom: 12px;">🛡️⚠️</div>
+    <h2 style="font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 8px;">
+      Security Validation Error (400)
+    </h2>
+    <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 24px; line-height: 1.5;">
+      {{ error_message or "Your request could not be validated. CSRF token validation failed or input parameters were malformed." }}
+    </p>
+    <div style="display: flex; gap: 12px; justify-content: center;">
+      <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+        <span>📊</span> Return to Dashboard
+      </a>
+      <a href="{{ url_for('login') }}" class="btn btn-secondary">
+        <span>🔑</span> Sign In
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
